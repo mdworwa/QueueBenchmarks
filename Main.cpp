@@ -25,8 +25,8 @@
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
-#define NUM_SAMPLES 10
-#define NUM_CPUS 48
+#define NUM_SAMPLES 10000
+#define NUM_CPUS 2
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
 
@@ -36,9 +36,6 @@ static int numEnqueue = NUM_SAMPLES;
 static int numDequeue = NUM_SAMPLES;
 static int CUR_NUM_THREADS = 0;
 static pthread_barrier_t barrier;
-//static long long int ENQUEUE_SAMPLES = 0;
-//static long long int DEQUEUE_SAMPLES = 0;
-float clockFreq;
 double enqueuethroughput, dequeuethroughput = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -362,7 +359,8 @@ void *b_worker_handler( void * in){
 		for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
 			start_tick = getticks();
 #endif
-			while(dequeue(q, &value) != 0);
+			while(dequeue(q, &value) == 0);
+
 #ifdef LATENCY
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
@@ -411,7 +409,6 @@ void *b_enqueue_handler( void * in) {
 	struct timespec looptime, loopend;
 	struct timespec tstart, tend;
 #endif
-	ELEMENT_TYPE value;
 	pthread_barrier_wait(&barrier);
 #ifdef THROUGHPUT
 	long int NUM_SAMPLES_PER_THREAD = 0;
@@ -447,8 +444,8 @@ void *b_enqueue_handler( void * in) {
 #endif
 #ifdef LATENCY
 	pthread_mutex_lock(&lock);
-	memcpy(dequeuetimestamp + numDequeue, timetracker, NUM_SAMPLES_PER_THREAD* sizeof (ticks));
-	numDequeue += NUM_SAMPLES_PER_THREAD;
+	memcpy(enqueuetimestamp + numEnqueue, timetracker, NUM_SAMPLES_PER_THREAD* sizeof (ticks));
+	numEnqueue += NUM_SAMPLES_PER_THREAD;
 	pthread_mutex_unlock(&lock);
 #endif
 #ifdef THROUGHPUT
@@ -504,16 +501,12 @@ void ComputeSummary(int type, int numThreads, FILE* afp) {
 	ticks enqueuetickmedian = 0, dequeuetickmedian = 0;
 
 	if (NUM_SAMPLES % 2 == 0) {
-		// if there is an even number of elements, return mean of the two elements in the middle
 		enqueuetickmedian = ((numEnqueueTicks[(numEnqueue / 2)] + numEnqueueTicks[(numEnqueue / 2) - 1]) / 2.0);
 	} else {
-		// else return the element in the middle
 		enqueuetickmedian = numEnqueueTicks[(numEnqueue / 2)];
 	}
 
 	if (numDequeue % 2 == 0) {
-		// if there is an even number of elements, return mean of the two elements in the middle
-
 		dequeuetickmedian = ((numDequeueTicks[((numDequeue) / 2)] + numDequeueTicks[((numDequeue) / 2) - 1]) / 2.0);
 	} else {
 		dequeuetickmedian = numDequeueTicks[((numDequeue) / 2)];
@@ -522,9 +515,8 @@ void ComputeSummary(int type, int numThreads, FILE* afp) {
 
 	printf("%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
 	fprintf(afp, "%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
+
 #endif
-
-
 
 #ifdef THROUGHPUT
 	printf("%d %d %f %f\n",NUM_SAMPLES, numThreads, enqueuethroughput,dequeuethroughput);
@@ -598,13 +590,13 @@ int main(int argc, char **argv) {
 	 pthread_setaffinity_np(pthread_self(), sizeof(set), &set);
 
 #ifdef LATENCY
-		fprintf(afp, "QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian\n");
-		printf("QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian\n");
+	fprintf(afp, "QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian\n");
+	printf("QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian\n");
 #endif
 
 #ifdef THROUGHPUT
-		fprintf(afp,"%d %d %f %f\n", NUM_SAMPLES, numThreads, enqueuethroughput, dequeuethroughput);
-		printf("%d %d %f %f\n", NUM_SAMPLES, numThreads, enqueuethroughput, dequeuethroughput);
+	fprintf(afp,"%d %d %f %f\n", NUM_SAMPLES, numThreads, enqueuethroughput, dequeuethroughput);
+	printf("%d %d %f %f\n", NUM_SAMPLES, numThreads, enqueuethroughput, dequeuethroughput);
 #endif
 	 switch (queueType) {
 		case 1:
@@ -702,19 +694,19 @@ int main(int argc, char **argv) {
 				q = (struct queue_t*)malloc(sizeof(struct queue_t));
 				queue_init(q);
 
-				pthread_t *worker_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
-				pthread_t *enqueue_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
+				pthread_t *b_worker_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
+				pthread_t *b_enqueue_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
 
 				pthread_barrier_init(&barrier, NULL, CUR_NUM_THREADS * 2);
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
-					pthread_create(&enqueue_threads[i], NULL, b_enqueue_handler,NULL);
-					pthread_create(&worker_threads[i], NULL, b_worker_handler, NULL);
+					pthread_create(&b_enqueue_threads[i], NULL, b_enqueue_handler,NULL);
+					pthread_create(&b_worker_threads[i], NULL, b_worker_handler, NULL);
 				}
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
-					pthread_join(enqueue_threads[i], NULL);
-					pthread_join(worker_threads[i], NULL);
+					pthread_join(b_enqueue_threads[i], NULL);
+					pthread_join(b_worker_threads[i], NULL);
 				}
 
 				ComputeSummary(queueType, CUR_NUM_THREADS, afp);
