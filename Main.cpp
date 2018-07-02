@@ -359,8 +359,12 @@ void *b_worker_handler( void * in){
 		for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
 			start_tick = getticks();
 #endif
-			while(dequeue(q, &value) == 0);
-
+			int ret;
+			do{
+				ret = dequeue(q, &value);
+			}
+			while(ret == 0);
+//			while(dequeue(q, &value) == 0);
 #ifdef LATENCY
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
@@ -423,7 +427,12 @@ void *b_enqueue_handler( void * in) {
 		for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
 			start_tick = getticks();
 #endif
-			while(enqueue(q, (ELEMENT_TYPE)i) != 0);
+			//while(enqueue(q, (ELEMENT_TYPE)i) != 0);
+			int ret;
+			do{
+				ret = enqueue(q, (ELEMENT_TYPE)i);
+			}
+			while(ret != 0);
 #ifdef LATENCY
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
@@ -506,7 +515,7 @@ void ComputeSummary(int type, int numThreads, FILE* afp) {
 		enqueuetickmedian = numEnqueueTicks[(numEnqueue / 2)];
 	}
 
-	if (numDequeue % 2 == 0) {
+	if (NUM_SAMPLES % 2 == 0) {
 		dequeuetickmedian = ((numDequeueTicks[((numDequeue) / 2)] + numDequeueTicks[((numDequeue) / 2) - 1]) / 2.0);
 	} else {
 		dequeuetickmedian = numDequeueTicks[((numDequeue) / 2)];
@@ -534,6 +543,8 @@ void ResetCounters(){
 	numDequeue = 0;
 	dequeuethroughput = 0;
 	enqueuethroughput = 0;
+	dequeue_ticks = 0;
+	enqueue_ticks = 0;
 }
 
 int main(int argc, char **argv) {
