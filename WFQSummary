@@ -1,8 +1,0 @@
-QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian
-2 1 1000 1000 42183 56697 43249362 60005010 139637.000000 223985.000000 44770 58227
-QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian
-2 1 10 10 53199 62226 17856420 34146474 1841286.000000 3697917.000000 56116 66628
-QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian
-2 1 10 10 42954 58935 13526442 35630955 1393782.000000 3618675.000000 43531 61996
-QueueType NumThreads EnqueueSamples DequeueSamples EnqueueMin DequeueMin EnqueueMax DequeueMax EnqueueAverage DequeueAverage EnqueueMedian DequeueMedian
-2 2 10000 10000 42117 51081 118720347 245737533 229693.000000 356829.000000 42669 57762
