@@ -33,7 +33,8 @@
 
 #define ELEMENT_TYPE uint64_t
 
-#define QUEUE_SIZE (1024 * 8) 
+//#define QUEUE_SIZE (1024 * 8) 
+#define QUEUE_SIZE 1000000
 #define BATCH_SIZE (QUEUE_SIZE/16)
 #define CONS_BATCH_SIZE BATCH_SIZE
 #define PROD_BATCH_SIZE BATCH_SIZE
