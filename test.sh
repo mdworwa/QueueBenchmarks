@@ -1,7 +1,6 @@
-types=(3)
-#num_threads=(2)
+types=(1 3)
 num_threads=(2 4 6 8 12 16 24 32 48 64)
-TEST="BQTests"
+TEST="LatencyTests"
 
 for type in "${types[@]}"
 do
