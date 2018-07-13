@@ -22,7 +22,6 @@
 #include <time.h>
 #include "squeue.h"
 #include "fifo.h"
-#include <algorithm>
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
@@ -52,8 +51,10 @@ struct threaddata {
 
 struct queue_t *q;
 
-unsigned long long int enqueueFile[NUM_SAMPLES];
-unsigned long long int dequeueFile[NUM_SAMPLES];
+//unsigned long long int enqueueFile[NUM_SAMPLES];
+//unsigned long long int dequeueFile[NUM_SAMPLES];
+int enqueueFile[NUM_SAMPLES];
+int dequeueFile[NUM_SAMPLES];
 
 #ifdef LATENCY
 static __inline__ ticks getticks()
@@ -342,8 +343,8 @@ void *push_enq(void *input) {
 }
 
 void *b_worker_handler( void * data){
-#ifdef LATENCY
 	struct threaddata* td = (struct threaddata*)data;
+#ifdef LATENCY
 	ticks start_tick,end_tick,diff_ticks;
 	int NUM_SAMPLES_PER_THREAD = NUM_SAMPLES / CUR_NUM_THREADS;
 	ticks *timetracker = (ticks*) malloc(sizeof(ticks)*NUM_SAMPLES_PER_THREAD);
@@ -355,7 +356,7 @@ void *b_worker_handler( void * data){
 	struct timespec looptime, loopend;
 	struct timespec tstart, tend;
 #endif
-	ELEMENT_TYPE value;
+	ELEMENT_TYPE value = td->startIndex;
 	pthread_barrier_wait(&barrier);
 #ifdef THROUGHPUT
 	long int NUM_SAMPLES_PER_THREAD = 0;
@@ -366,7 +367,7 @@ void *b_worker_handler( void * data){
 	while (diff <= DEQUEUE_SECONDS) {
 #endif
 #ifdef LATENCY
-		for (int i = td->startIndex; i < NUM_SAMPLES_PER_THREAD; i++) {
+		for (int i = td->startIndex; i < (td->startIndex + NUM_SAMPLES_PER_THREAD); i++) {
 			start_tick = getticks();
 #endif
 			int ret;
@@ -374,9 +375,11 @@ void *b_worker_handler( void * data){
 				ret = dequeue(q, &value);
 			}
 			while(ret == 0);
+			//printf("value: %d\n", value);
 //			while(dequeue(q, &value) == 0);
 #ifdef LATENCY
-			dequeueFile[i] = value;
+			dequeueFile[i] = (int)value;
+			value += 1;
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
 			timetracker[i] = diff_ticks;
@@ -386,7 +389,7 @@ void *b_worker_handler( void * data){
 #ifdef THROUGHPUT
 		count++;
 		if (count % 10000 == 0) {
-			clock_gettime(CLOCK_MONOTONIC, &loopend);
+			clock_gettime(CLOCK_MOfNOTONIC, &loopend);
 			NUM_SAMPLES_PER_THREAD += count;
 			count = 1;
 			diff = (loopend.tv_sec - looptime.tv_sec);
@@ -436,7 +439,7 @@ void *b_enqueue_handler( void * data) {
 	while (diff <= DEQUEUE_SECONDS) {
 #endif
 #ifdef LATENCY
-		for (int i = td->startIndex; i < NUM_SAMPLES_PER_THREAD; i++) {
+		for (int i = td->startIndex; i < (td->startIndex + NUM_SAMPLES_PER_THREAD); i++) {
 			start_tick = getticks();
 #endif
 			//while(enqueue(q, (ELEMENT_TYPE)i) != 0);
@@ -490,6 +493,10 @@ void SortTicks(ticks* numTicks, int total, int faileddeq) {
 	qsort(numTicks, total, sizeof (*numTicks), cmpfunc);
 }
 
+void sortArray(int pArray[], int total){
+	qsort(pArray, total, sizeof (*pArray), cmpfunc);
+}
+
 void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 #ifdef LATENCY
 	ticks totalEnqueueTicks = 0, totalDequeueTicks = 0;
@@ -538,15 +545,18 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 	printf("%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
 	fprintf(afp, "%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
 
-	SortTicks(enqueueFile, NUM_SAMPLES, 0);
-	SortTicks(dequeueFile, NUM_SAMPLES, 0);
+//	SortTicks((unsigned long long int*)enqueueFile, NUM_SAMPLES, 0);
+//	SortTicks((unsigned long long int*)dequeueFile, NUM_SAMPLES, 0);
+	sortArray(enqueueFile, NUM_SAMPLES);
+	sortArray(dequeueFile, NUM_SAMPLES);
 
 	for(int i = 0; i < NUM_SAMPLES; i++){
 		//fprintf(rfp, "%llu %llu\n ", (numEnqueueTicks[i]), (numDequeueTicks[i])); //latency values
-		fprintf(rfp, "%llu %llu\n", (enqueueFile[i]), (dequeueFile[i]));
-		if((enqueueFile[i])!=(dequeueFile[i])){
-			printf("Don't match up at: #%d\n", i); //here for test purposes
-		}
+		//fprintf(rfp, "%llu %llu\n", (enqueueFile[i]), (dequeueFile[i]));
+		fprintf(rfp, "%d %d\n", (enqueueFile[i]), (dequeueFile[i]));
+//		if((enqueueFile[i])!=(dequeueFile[i])){
+//			printf("Don't match up at: #%d\n", i); //here for test purposes
+//		}
 	}
 #endif
 
@@ -739,7 +749,7 @@ int main(int argc, char **argv) {
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
 					struct threaddata * td = (struct threaddata * ) malloc(sizeof(struct threaddata));
 					td->my_cpu = i + CUR_NUM_THREADS;
-					td->startIndex = i * (NUM_SAMPLES/(CUR_NUM_THREADS));
+					td->startIndex = i * (NUM_SAMPLES/CUR_NUM_THREADS);
 					pthread_create(&b_enqueue_threads[i], NULL, b_enqueue_handler,(void*)td);
 					pthread_create(&b_worker_threads[i], NULL, b_worker_handler, (void*)td);
 				}
