@@ -25,8 +25,8 @@
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
-#define NUM_SAMPLES 100
-#define NUM_CPUS 2
+#define NUM_SAMPLES 100000000
+#define NUM_CPUS 48
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
 
@@ -51,8 +51,6 @@ struct threaddata {
 
 struct queue_t *q;
 
-//unsigned long long int enqueueFile[NUM_SAMPLES];
-//unsigned long long int dequeueFile[NUM_SAMPLES];
 int enqueueFile[NUM_SAMPLES];
 int dequeueFile[NUM_SAMPLES];
 
@@ -374,15 +372,13 @@ void *b_worker_handler( void * data){
 			do{
 				ret = dequeue(q, &value);
 			}
-			while(ret == 0);
-			//printf("value: %d\n", value);
+			while(ret != 0);
 //			while(dequeue(q, &value) == 0);
 #ifdef LATENCY
-			dequeueFile[i] = (int)value;
-			value += 1;
+			dequeueFile[i-1] = (int)value;
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
-			timetracker[i] = diff_ticks;
+			timetracker[i-td->startIndex] = diff_ticks;
 			__sync_add_and_fetch(&dequeue_ticks, diff_ticks);
 		}
 #endif
@@ -449,7 +445,7 @@ void *b_enqueue_handler( void * data) {
 			}
 			while(ret != 0);
 #ifdef LATENCY
-			enqueueFile[i] = (ELEMENT_TYPE)i;
+			enqueueFile[i-1] = (ELEMENT_TYPE)i;
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
 			timetracker[i] = diff_ticks;
@@ -495,6 +491,15 @@ void SortTicks(ticks* numTicks, int total, int faileddeq) {
 
 void sortArray(int pArray[], int total){
 	qsort(pArray, total, sizeof (*pArray), cmpfunc);
+}
+
+bool check(int array1[], int array2[]){
+	for(int i=0; i<NUM_SAMPLES; i++){
+		if(array1[i]!=array2[i]){
+			return false;
+		}
+	}
+	return true;
 }
 
 void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
@@ -545,19 +550,26 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 	printf("%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
 	fprintf(afp, "%d %d %d %d %llu %llu %llu %llu %lf %lf %llu %llu\n", type, numThreads, numEnqueue, numDequeue, enqueuetickMin, dequeuetickMin, enqueuetickMax, dequeuetickMax, tickEnqueueAverage, tickDequeueAverage, enqueuetickmedian, dequeuetickmedian);
 
-//	SortTicks((unsigned long long int*)enqueueFile, NUM_SAMPLES, 0);
-//	SortTicks((unsigned long long int*)dequeueFile, NUM_SAMPLES, 0);
 	sortArray(enqueueFile, NUM_SAMPLES);
 	sortArray(dequeueFile, NUM_SAMPLES);
 
-	for(int i = 0; i < NUM_SAMPLES; i++){
-		//fprintf(rfp, "%llu %llu\n ", (numEnqueueTicks[i]), (numDequeueTicks[i])); //latency values
-		//fprintf(rfp, "%llu %llu\n", (enqueueFile[i]), (dequeueFile[i]));
-		fprintf(rfp, "%d %d\n", (enqueueFile[i]), (dequeueFile[i]));
-//		if((enqueueFile[i])!=(dequeueFile[i])){
-//			printf("Don't match up at: #%d\n", i); //here for test purposes
-//		}
+	if(check(enqueueFile, dequeueFile)==false){
+		printf("There was a mismatch in the array.\n");
 	}
+	else{
+		for(int i=0; i<NUM_SAMPLES;i+1000){
+			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
+		}
+	}
+
+//	for(int i = 0; i < NUM_SAMPLES; i++){
+//		//fprintf(rfp, "%llu %llu\n ", (numEnqueueTicks[i]), (numDequeueTicks[i])); //latency values
+//		//fprintf(rfp, "%llu %llu\n", (enqueueFile[i]), (dequeueFile[i]));
+//		fprintf(rfp, "%d %d\n", (enqueueFile[i]), (dequeueFile[i]));
+//		if(check(enqueueFile, dequeueFile)==false){
+//			printf("There was a mismatch in the array.\n");
+//		}
+//	}
 #endif
 
 #ifdef THROUGHPUT
@@ -748,8 +760,8 @@ int main(int argc, char **argv) {
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
 					struct threaddata * td = (struct threaddata * ) malloc(sizeof(struct threaddata));
-					td->my_cpu = i + CUR_NUM_THREADS;
-					td->startIndex = i * (NUM_SAMPLES/CUR_NUM_THREADS);
+					td->my_cpu = i;
+					td->startIndex = (i * (NUM_SAMPLES/CUR_NUM_THREADS)) + 1;
 					pthread_create(&b_enqueue_threads[i], NULL, b_enqueue_handler,(void*)td);
 					pthread_create(&b_worker_threads[i], NULL, b_worker_handler, (void*)td);
 				}
