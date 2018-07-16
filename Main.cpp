@@ -25,7 +25,7 @@
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
-#define NUM_SAMPLES 100000000
+#define NUM_SAMPLES 8388608
 #define NUM_CPUS 48
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
@@ -368,12 +368,13 @@ void *b_worker_handler( void * data){
 		for (int i = td->startIndex; i < (td->startIndex + NUM_SAMPLES_PER_THREAD); i++) {
 			start_tick = getticks();
 #endif
-			int ret;
-			do{
-				ret = dequeue(q, &value);
-			}
-			while(ret != 0);
-//			while(dequeue(q, &value) == 0);
+//			int ret;
+//			do{
+//				ret = dequeue(q, &value);
+//			}
+			//while(ret == 0);
+//			while(ret != 0);
+			while(dequeue(q, &value) != 0);
 #ifdef LATENCY
 			dequeueFile[i-1] = (int)value;
 			end_tick = getticks();
@@ -448,7 +449,7 @@ void *b_enqueue_handler( void * data) {
 			enqueueFile[i-1] = (ELEMENT_TYPE)i;
 			end_tick = getticks();
 			diff_ticks = end_tick - start_tick;
-			timetracker[i] = diff_ticks;
+			timetracker[i-td->startIndex] = diff_ticks;
 			__sync_add_and_fetch(&enqueue_ticks, diff_ticks);
 		}
 #endif
@@ -556,11 +557,11 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 	if(check(enqueueFile, dequeueFile)==false){
 		printf("There was a mismatch in the array.\n");
 	}
-	else{
-		for(int i=0; i<NUM_SAMPLES;i+1000){
-			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
-		}
-	}
+//	else{
+//		for(int i=0; i<NUM_SAMPLES;i+1000){
+//			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
+//		}
+//	}
 
 //	for(int i = 0; i < NUM_SAMPLES; i++){
 //		//fprintf(rfp, "%llu %llu\n ", (numEnqueueTicks[i]), (numDequeueTicks[i])); //latency values
