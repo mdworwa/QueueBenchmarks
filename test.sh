@@ -1,7 +1,10 @@
-types=(1 3)
+#types=(1 3)
+types=(2)
 num_threads=(2 4 6 8 12 16 24 32 48 64)
-TEST="LatencyTests"
-RAW="LatencyRaw"
+#TEST="LatencyTests"
+TEST="WFTest"
+RAW="WFData"
+#RAW="LatencyRaw"
 
 for type in "${types[@]}"
 do
