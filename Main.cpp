@@ -25,9 +25,8 @@
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
-//#define NUM_SAMPLES 67108864 //closest to 100,000,000 but under
-//#define NUM_SAMPLES 8388608 //closest to 10,000
-#define NUM_SAMPLES 2097152 //works for sure
+//#define NUM_SAMPLES 128 //for test purposes
+#define NUM_SAMPLES 8388608 //closest to 10,000
 #define NUM_CPUS 48
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
@@ -559,11 +558,11 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 	if(check(enqueueFile, dequeueFile)==false){
 		printf("There was a mismatch in the array.\n");
 	}
-//	else{
-//		for(int i=0; i<NUM_SAMPLES;i+1000){
-//			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
-//		}
-//	}
+	else{
+		for(int i=0; i<NUM_SAMPLES; i+=1000){
+			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
+		}
+	}
 
 #endif
 
