@@ -26,13 +26,15 @@
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
 //#define NUM_SAMPLES 128 //for test purposes
-#define NUM_SAMPLES 8388608 //closest to 10,000
+//#define NUM_SAMPLES 8388608 //closest to 10,000
 #define NUM_CPUS 48
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
 
 ticks *enqueuetimestamp, *dequeuetimestamp;
 static ticks dequeue_ticks = 0, enqueue_ticks = 0;
+static int NUM_SAMPLES = 0;
+static int sampleInterval = 0;
 static int numEnqueue = NUM_SAMPLES;
 static int numDequeue = NUM_SAMPLES;
 static int CUR_NUM_THREADS = 0;
@@ -52,8 +54,8 @@ struct threaddata {
 
 struct queue_t *q;
 
-int enqueueFile[NUM_SAMPLES];
-int dequeueFile[NUM_SAMPLES];
+int* enqueueFile;
+int* dequeueFile;
 
 #ifdef LATENCY
 static __inline__ ticks getticks()
@@ -559,7 +561,7 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 		printf("There was a mismatch in the array.\n");
 	}
 	else{
-		for(int i=0; i<NUM_SAMPLES; i+=1000){
+		for(int i=0; i<NUM_SAMPLES; i+=sampleInterval){
 			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
 		}
 	}
@@ -595,14 +597,17 @@ int main(int argc, char **argv) {
 	 int *threads = (int*)malloc(sizeof (int*));
 	 char* fileName1;
 	 char* fileName2;
-	 if (argc != 5) {
+	 if (argc != 7) {
 		 printf("Usage: <QueueType 1-SQueue, 2-Wait-Free, 3-B-Queue> \nThreads-1,2,4,6,8,12,16,24,32,48,64 \nSummary file name: <name>\nRaw data file name: ");
 		 exit(-1);
 	 }
 	 else {
 	    char* arg = argv[1];
 	    queueType = atoi(arg);
-
+	    NUM_SAMPLES = atoi(argv[5]);
+	    sampleInterval = atoi(argv[6]);
+	    enqueueFile = (int*) malloc(sizeof(int)*NUM_SAMPLES);
+	    dequeueFile = (int*) malloc(sizeof(int)*NUM_SAMPLES);
 	    switch (queueType) {
 	    	case 1:
 	    		printf("Queue type: SQueue\n");
