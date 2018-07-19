@@ -1,5 +1,5 @@
 /*
- * Main.cpp
+ *Main.cpp
  *
  *  Created on: Jun 15, 2018
  *      Author: mdworwa
@@ -561,7 +561,7 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 		printf("There was a mismatch in the array.\n");
 	}
 	else{
-		for(int i=0; i<NUM_SAMPLES; i+=sampleInterval){
+		for(int i=0; i<numEnqueue; i+=sampleInterval){
 			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
 		}
 	}
