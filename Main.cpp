@@ -25,7 +25,7 @@
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
-#define NUM_SAMPLES 1024
+#define NUM_SAMPLES 8388608
 #define NUM_CPUS 48
 #define ENQUEUE_SECONDS 3.0
 #define DEQUEUE_SECONDS 3.0
@@ -281,7 +281,7 @@ void *push_enq(void *input) {
 	struct arg_queue* p_queue = (struct arg_queue*) input;
 #ifdef LATENCY
     ticks start_tick, end_tick;
-    int NUM_SAMPLES_PER_THREAD = NUM_SAMPLES / CUR_NUM_THREADS;
+    int NUM_SAMPLES_PER_THREAD = NUM_SAMPLES / NUM_THREADS;
     ticks *timetracker;
     timetracker = (ticks *) malloc(sizeof (ticks) * NUM_SAMPLES_PER_THREAD);
     for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
@@ -557,12 +557,20 @@ void ComputeSummary(int type, int numThreads, FILE* afp, FILE* rfp) {
 	if(check(enqueueFile, dequeueFile)==false){
 		printf("There was a mismatch in the array.\n");
 	}
-	/*else{
-		printf("The array matches.\n");
-		for(int i=0; i<NUM_SAMPLES;i+1000){
-			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
-		}
-	}*/
+//	else{
+//		for(int i=0; i<NUM_SAMPLES;i+1000){
+//			fprintf(rfp, "%llu %llu\n", (numEnqueueTicks[i]), (numDequeueTicks[i]));
+//		}
+//	}
+
+//	for(int i = 0; i < NUM_SAMPLES; i++){
+//		//fprintf(rfp, "%llu %llu\n ", (numEnqueueTicks[i]), (numDequeueTicks[i])); //latency values
+//		//fprintf(rfp, "%llu %llu\n", (enqueueFile[i]), (dequeueFile[i]));
+//		fprintf(rfp, "%d %d\n", (enqueueFile[i]), (dequeueFile[i]));
+//		if(check(enqueueFile, dequeueFile)==false){
+//			printf("There was a mismatch in the array.\n");
+//		}
+//	}
 #endif
 
 #ifdef THROUGHPUT
@@ -716,11 +724,10 @@ int main(int argc, char **argv) {
 					struct arg_queue* refQueue = (struct arg_queue*) malloc(sizeof(struct arg_queue));
 					refQueue->queue = &queue;
 					refQueue->i = i;
-					//pthread_create(&worker_threads[i], NULL, pop_deq,((void*) refQueue));
 					pthread_create(&worker_threads[i - CUR_NUM_THREADS], NULL, pop_deq,((void*) refQueue));
 				}
 
-				for (int i = 0; i < CUR_NUM_THREADS; i++) {
+				for (int i = 0; i < NUM_THREADS; i++) {
 					pthread_join(enqueue_threads[i], NULL);
 					pthread_join(worker_threads[i], NULL);
 				}
@@ -733,6 +740,8 @@ int main(int argc, char **argv) {
 			break;
 		case 3:
 			for(int k = 0; k < threadCount; k++) {
+				ResetCounters();
+
 				enqueuetimestamp = (ticks *) malloc(sizeof(ticks) * NUM_SAMPLES);
 				dequeuetimestamp = (ticks *) malloc(sizeof(ticks) * NUM_SAMPLES);
 
@@ -770,5 +779,6 @@ int main(int argc, char **argv) {
 			}
 			break;
 	}
+//	pthread_exit(NULL);
 	return 0;
 }
