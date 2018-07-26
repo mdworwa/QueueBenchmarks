@@ -22,6 +22,7 @@
 #include <time.h>
 #include "squeue.h"
 #include "fifo.h"
+#include "Queue.h"
 
 typedef unsigned long long ticks;
 #define NUM_THREADS 1
@@ -53,6 +54,11 @@ struct threaddata {
 };
 
 struct timeval sTime, eTime;
+
+struct lockQueue{
+	struct queue *q;
+	struct task_desc *task;
+};
 
 struct queue_t *q;
 
@@ -493,13 +499,8 @@ void *b_enqueue_handler( void * data) {
 }
 
 void *l_worker_handler(void * in) {
-	int my_cpu = (int) (long) in;
+	struct lockQueue *q = (lockQueue *)in;
 
-	cpu_set_t set;
-	CPU_ZERO(&set);
-	CPU_SET(my_cpu % NUM_CPUS, &set);
-
-	pthread_setaffinity_np(pthread_self(), sizeof (set), &set);
 #ifdef LATENCY
     ticks start_tick, end_tick;
     int NUM_SAMPLES_PER_THREAD = NUM_SAMPLES / CUR_NUM_THREADS;
@@ -528,9 +529,9 @@ void *l_worker_handler(void * in) {
             start_tick = getticks();
 #endif
 #ifdef THROUGHPUT
-        ret = Dequeue();
+        ret = dequeue(lq);
 #else
-            Dequeue();
+            dequeue(q->q);
 #endif
 #ifdef LATENCY
             end_tick = getticks();
@@ -567,13 +568,7 @@ void *l_worker_handler(void * in) {
 }
 
 void *l_enqueue_handler(void * in) {
-	int my_cpu = (int) (long) in;
-
-	cpu_set_t set;
-	CPU_ZERO(&set);
-	CPU_SET(my_cpu % NUM_CPUS, &set);
-
-	pthread_setaffinity_np(pthread_self(), sizeof (set), &set);
+	struct lockQueue *q = (lockQueue *)in;
 #ifdef LATENCY
     ticks start_tick, end_tick;
     int NUM_SAMPLES_PER_THREAD = NUM_SAMPLES / CUR_NUM_THREADS;
@@ -599,7 +594,7 @@ void *l_enqueue_handler(void * in) {
 		for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
 			start_tick = getticks();
 #endif
-			enqueue(task, q);
+			enqueue(q->task, q->q);
 #ifdef LATENCY
 			end_tick = getticks();
 			timestamp[i] = end_tick - start_tick;
@@ -768,9 +763,9 @@ int main(int argc, char **argv) {
 	    	case 3:
 	    		printf("Queue type: B-Queue\n");
 	    		break;
-		case 4:
-			printf("Queue type: Lock-Based\n");
-			break;
+	    	case 4:
+	    		printf("Queue type: Lock-Based\n");
+	    		break;
 	    	default:
 	    		printf("Usage: <QueueType 1-SQueue, 2-Wait-Free, 3-B-Queue, 4-Lock-Based> \nThreads-1,2,4,6,8,12,16,24,32,48,64 \nSummary file name: <name>\nRaw data file name: ");
 	    		exit(-1);
@@ -912,7 +907,7 @@ int main(int argc, char **argv) {
 				pthread_barrier_init(&barrier, NULL, CUR_NUM_THREADS * 2);
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
-					struct threaddata * td = (struct threaddata * ) malloc(sizeof(struct threaddata));
+					struct threaddata * td = (struct threaddata *) malloc(sizeof(struct threaddata));
 					td->my_cpu = i;
 					td->startIndex = (i * (NUM_SAMPLES/CUR_NUM_THREADS)) + 1;
 					pthread_create(&b_enqueue_threads[i], NULL, b_enqueue_handler,(void*)td);
@@ -933,7 +928,6 @@ int main(int argc, char **argv) {
 		
 		case 4:
 			for (int k = 0; k < threadCount; k++) {
-				create_queue(8192);
 				ResetCounters();
 				enqueuetimestamp = (ticks *) malloc(sizeof(ticks) * NUM_SAMPLES);
 				dequeuetimestamp = (ticks *) malloc(sizeof(ticks) * NUM_SAMPLES);
@@ -948,10 +942,15 @@ int main(int argc, char **argv) {
 				pthread_t *enqueue_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
 
 				pthread_barrier_init(&barrier, NULL, threads[k]);
+				struct queue *lq = create_queue(8192);
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
-					pthread_create(&enqueue_threads[i], NULL, l_enqueue_handler, (void*) (unsigned long) (i));
-					pthread_create(&worker_threads[i], NULL, l_worker_handler, (void*) (unsigned long) (i + CUR_NUM_THREADS));
+					struct task_desc *task = (task_desc *) malloc(sizeof(task_desc));
+					//can set task attributes here using 'task->'
+					struct lockQueue lockQ = {lq, task};
+
+					pthread_create(&enqueue_threads[i], NULL, l_enqueue_handler, (void*)&lockQ);
+					pthread_create(&worker_threads[i], NULL, l_worker_handler, (void*)&lockQ);
 				}
 
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
@@ -961,6 +960,7 @@ int main(int argc, char **argv) {
 
 				ComputeSummary(queueType, CUR_NUM_THREADS, afp, rfp);
 
+				dispose_queue(lq);
 				free(enqueuetimestamp);
 				free(dequeuetimestamp);
 			}

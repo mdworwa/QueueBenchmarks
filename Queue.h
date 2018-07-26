@@ -1,4 +1,4 @@
-fndef __MTC_QUEUE_H
+#ifndef __MTC_QUEUE_H
 #define __MTC_QUEUE_H
 
 #include <pthread.h>
