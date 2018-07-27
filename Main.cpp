@@ -382,13 +382,13 @@ void *b_worker_handler( void * data){
 		for (int i = td->startIndex; i < (td->startIndex + NUM_SAMPLES_PER_THREAD); i++) {
 			start_tick = getticks();
 #endif
-//			int ret;
-//			do{
-//				ret = dequeue(q, &value);
-//			}
+			int ret;
+			do{
+				ret = dequeue(q, &value);
+			}
 			//while(ret == 0);
-//			while(ret != 0);
-			while(dequeue(q, &value) != 0);
+			while(ret != 0);
+//			while(dequeue(q, &value) != 0);
 #ifdef LATENCY
 			dequeueFile[i-1] = (int)value;
 			end_tick = getticks();
@@ -594,7 +594,7 @@ void *l_enqueue_handler(void * in) {
 		for (int i = 0; i < NUM_SAMPLES_PER_THREAD; i++) {
 			start_tick = getticks();
 #endif
-			enqueue(q->task, q->q);
+			enqueue(i, q->q);
 #ifdef LATENCY
 			end_tick = getticks();
 			timestamp[i] = end_tick - start_tick;
@@ -942,8 +942,7 @@ int main(int argc, char **argv) {
 				pthread_t *enqueue_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
 
 				pthread_barrier_init(&barrier, NULL, threads[k]);
-				struct queue *lq = create_queue(8192);
-
+				struct queue *lq = create_queue(33554432);
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
 					struct task_desc *task = (task_desc *) malloc(sizeof(task_desc));
 					//can set task attributes here using 'task->'

@@ -1,10 +1,11 @@
 #!/bin/bash
 
-types=(1 4)
+types=(4)
+#num_threads=(2)
 num_threads=(2 4 6 8 12 16 24 32 48 64)
-TEST="S_LatencyTest"
-RAW="S_LatencyData"
-samples=67108864
+TEST="S_MPMC_LatencyTest"
+RAW="S_MPMC_LatencyData"
+samples=33554432
 interval=1000
 
 for type in "${types[@]}"

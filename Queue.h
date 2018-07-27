@@ -14,7 +14,7 @@ struct task_desc {
 };
 
 struct queue {
-	struct task_desc **tasks; /* the actual queue */
+	int *tasks; /* the actual queue */
 	int capacity;             /* maximum number of task slots */
 	int rear;                 /* tasks[rear % capacity] is the last item */
 	int front;                /* tasks[(front+1) % capacity] is the first */
@@ -25,8 +25,8 @@ struct queue {
 
 struct queue *create_queue(int size);
 void dispose_queue(struct queue *q);
-void enqueue(struct task_desc *task, struct queue *q);
-struct task_desc *dequeue(struct queue *q);
+void enqueue(int task, struct queue *q);
+int dequeue(struct queue *q);
 
 
 #endif /* __MTC_QUEUE_H */

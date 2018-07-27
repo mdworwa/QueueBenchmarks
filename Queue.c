@@ -5,7 +5,7 @@ struct queue *create_queue(int size)
 {
 	struct queue *q = (struct queue *) malloc(sizeof(struct queue));
 
-	q->tasks = (struct task_desc **) malloc(sizeof(struct task_desc) * size);
+	q->tasks = (int*) malloc(sizeof(int) * size);
 	q->capacity = size;
 	q->front = 0;
 	q->rear = 0;
@@ -25,7 +25,7 @@ void dispose_queue(struct queue *q)
 	free(q);
 }
 
-void enqueue(struct task_desc *task, struct queue *q)
+void enqueue(int task, struct queue *q)
 {
 	sem_wait(&q->spaces_sem);
 	pthread_mutex_lock(&q->lock);
@@ -36,9 +36,9 @@ void enqueue(struct task_desc *task, struct queue *q)
 	sem_post(&q->task_sem);
 }
 
-struct task_desc *dequeue(struct queue *q)
+int dequeue(struct queue *q)
 {
-	struct task_desc *task;
+	int task;
 
 	sem_wait(&q->task_sem);
 	pthread_mutex_lock(&q->lock);
