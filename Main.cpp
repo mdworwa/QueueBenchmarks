@@ -529,7 +529,7 @@ void *l_worker_handler(void * in) {
             start_tick = getticks();
 #endif
 #ifdef THROUGHPUT
-        ret = dequeue(lq);
+        ret = dequeue(q->q);
 #else
             dequeue(q->q);
 #endif
@@ -942,7 +942,7 @@ int main(int argc, char **argv) {
 				pthread_t *enqueue_threads = (pthread_t *) malloc(sizeof(pthread_t) * CUR_NUM_THREADS);
 
 				pthread_barrier_init(&barrier, NULL, threads[k]);
-				struct queue *lq = create_queue(33554432);
+				struct queue *lq = create_queue(131072);
 				for (int i = 0; i < CUR_NUM_THREADS; i++) {
 					struct task_desc *task = (task_desc *) malloc(sizeof(task_desc));
 					//can set task attributes here using 'task->'

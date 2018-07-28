@@ -9,8 +9,8 @@
 #define SQUEUE_H
 
 #include <stdio.h>
-#define MAX_SIZE 16777216
-//#define MAX_SIZE 524288
+//#define MAX_SIZE 16777216
+#define MAX_SIZE 131072
 //#define MAX_SIZE 16384
 //#define MAX_SIZE    (32*1024*1024)        // Define maximum length of the queue
 typedef int atom;
